@@ -55,8 +55,8 @@ def details_extractor(url):
             case _:
                 review_rating = 'NA'
 
-        image_url = 'https://books.toscrape.com/' + soup.find("div", class_="item active") \
-            .find('img')['src']
+        img_url_raw = soup.find("div", class_="item active").find('img')['src']
+        image_url = 'https://books.toscrape.com/' + img_url_raw.strip("./")
 
         #  Create a list with the data extracted from product page
         book_extract = [product_page_url, universal_product_code, title, price_including_tax,
@@ -107,6 +107,7 @@ def product_links_extractor(url):
 # Extract all book categories from 'https://books.toscrape.com/
 def all_cats_extractor(url):
     cats_urls = []
+    cats_names = []
     response = requests.get(url)
     if response.ok:
         soup = BeautifulSoup(response.text, 'lxml')
@@ -114,9 +115,11 @@ def all_cats_extractor(url):
         for cat in cats:
             link = cat['href']
             cats_urls.append('https://books.toscrape.com/' + link)
+            cat_name = cat.text.strip()
+            cats_names.append(cat_name)
     else:
         return print("url error")
-    return cats_urls
+    return cats_urls, cats_names
 
 
 def main():
@@ -126,19 +129,14 @@ def main():
                    "review_rating", "image_url"]
 
     site_url = 'https://books.toscrape.com/'
-    categories_urls = all_cats_extractor(site_url)
+    categories = all_cats_extractor(site_url)
 
-    i = 1
-    for category_url in categories_urls:
+    for category_url, category_name in zip(categories[0], categories[1]):
         books_urls = product_links_extractor(category_url)
-        create_csv("cat_" + str(i), header_list)
+        create_csv(category_name, header_list)
 
         for book_url in books_urls:
-            append_csv("cat_" + str(i), details_extractor(book_url))
-        i += 1
+            append_csv(category_name, details_extractor(book_url))
 
 
 main()
-
-# print(details_extractor(
-#     'https://books.toscrape.com/catalogue/alice-in-wonderland-alices-adventures-in-wonderland-1_5/index.html'))
