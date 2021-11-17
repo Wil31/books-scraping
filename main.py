@@ -5,7 +5,7 @@ import re
 
 
 # Extract a list of data from a specific book url input
-def extractor(url):
+def details_extractor(url):
     response = requests.get(url)
     if response.ok:
         soup = BeautifulSoup(response.text, 'lxml')
@@ -31,7 +31,11 @@ def extractor(url):
 
         title = soup.find("h1").text
 
-        product_description = soup.find('div', id="product_description").find_next('p').text
+        product_description = soup.find('div', id="product_description")
+        if not product_description:
+            product_description = "No description"
+        else:
+            product_description = product_description.find_next('p').text
 
         category = soup.find("ul", "breadcrumb").find_next("a").find_next("a").find_next("a").text
 
@@ -78,7 +82,7 @@ def append_csv(filename, row):
 
 
 # Extract all product links from a category input
-def cat_extractor(url):
+def product_links_extractor(url):
     links = []
     cat_url = url.rstrip('index.html')
     while True:
@@ -100,14 +104,41 @@ def cat_extractor(url):
     return links
 
 
-# Header list for the csv file
-header_list = ["product_page_url", "universal_product_code", "title", "price_including_tax",
-               "price_excluding_tax", "number_available", "product_description", "category",
-               "review_rating", "image_url"]
-create_csv("data", header_list)
+# Extract all book categories from 'https://books.toscrape.com/
+def all_cats_extractor(url):
+    cats_urls = []
+    response = requests.get(url)
+    if response.ok:
+        soup = BeautifulSoup(response.text, 'lxml')
+        cats = soup.find('ul', class_='nav nav-list').find('ul').findAll('a')
+        for cat in cats:
+            link = cat['href']
+            cats_urls.append('https://books.toscrape.com/' + link)
+    else:
+        return print("url error")
+    return cats_urls
 
-cat_url = 'https://books.toscrape.com/catalogue/category/books/travel_2/index.html'
-books_urls = cat_extractor(cat_url)
 
-for book_url in books_urls:
-    append_csv("data", extractor(book_url))
+def main():
+    # Header list for the csv file
+    header_list = ["product_page_url", "universal_product_code", "title", "price_including_tax",
+                   "price_excluding_tax", "number_available", "product_description", "category",
+                   "review_rating", "image_url"]
+
+    site_url = 'https://books.toscrape.com/'
+    categories_urls = all_cats_extractor(site_url)
+
+    i = 1
+    for category_url in categories_urls:
+        books_urls = product_links_extractor(category_url)
+        create_csv("cat_" + str(i), header_list)
+
+        for book_url in books_urls:
+            append_csv("cat_" + str(i), details_extractor(book_url))
+        i += 1
+
+
+main()
+
+# print(details_extractor(
+#     'https://books.toscrape.com/catalogue/alice-in-wonderland-alices-adventures-in-wonderland-1_5/index.html'))
