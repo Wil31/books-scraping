@@ -1,8 +1,9 @@
+import csv
+import os
+import re
+
 import requests
 from bs4 import BeautifulSoup
-import csv
-import re
-import os
 
 SITE_URL = 'https://books.toscrape.com/'
 
@@ -147,13 +148,19 @@ def main():
     header_list = ["product_page_url", "universal_product_code", "title", "price_including_tax",
                    "price_excluding_tax", "number_available", "product_description", "category",
                    "review_rating", "image_url"]
-
+    print("====================\n"
+          "Starting extraction..."
+          "Please wait until finished.")
     categories = all_cats_extractor(SITE_URL)
 
     for category_url, category_name in zip(categories[0], categories[1]):
         books_urls = product_links_extractor(category_url)
         create_csv(category_name, header_list)
         append_csv(category_name, books_urls)
+
+    print("====================\n"
+          "Extract successful !\n"
+          "====================")
 
 
 main()

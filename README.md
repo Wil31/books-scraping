@@ -25,5 +25,6 @@ Please follow the next steps in order.
 ### 3 - Execute the code
 * Be sure you are in the folder you extracted _([...]\books-scraping-main)_
 * Execute the program with command `py.exe .\main.py`
+* Now wait for the message "Extract successful !" in the terminal
 * At the end of execution you will find a new folder /data, with a CSV file for each book category, and another 
 folder /images with every product picture.
