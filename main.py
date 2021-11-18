@@ -2,6 +2,11 @@ import requests
 from bs4 import BeautifulSoup
 import csv
 import re
+import os
+
+SITE_URL = 'https://books.toscrape.com/'
+
+CWD = os.getcwd()
 
 
 # Extract a list of data from a specific book url input
@@ -10,7 +15,6 @@ def details_extractor(url):
     if response.ok:
         soup = BeautifulSoup(response.text, 'lxml')
 
-        product_page_url = url
         table = soup.findAll('td')
         universal_product_code = table[0].text
 
@@ -56,10 +60,11 @@ def details_extractor(url):
                 review_rating = 'NA'
 
         img_url_raw = soup.find("div", class_="item active").find('img')['src']
-        image_url = 'https://books.toscrape.com/' + img_url_raw.strip("./")
+        image_url = SITE_URL + img_url_raw.strip("./")
 
+        download_img(image_url, title)
         #  Create a list with the data extracted from product page
-        book_extract = [product_page_url, universal_product_code, title, price_including_tax,
+        book_extract = [url, universal_product_code, title, price_including_tax,
                         price_excluding_tax, number_available, product_description, category,
                         review_rating, image_url]
         return book_extract
@@ -67,18 +72,22 @@ def details_extractor(url):
         return print("url_error")
 
 
-# Create file 'filename'.csv and input the header
+# Create file 'filename'.csv in data folder and input the header
 def create_csv(filename, header):
-    with open(filename + '.csv', 'w', encoding="utf-8") as file_csv:
+    filepath = os.path.join(CWD + '/data', filename)
+    if not os.path.exists(CWD + '/data'):
+        os.makedirs(CWD + '/data')
+    with open(filepath + '.csv', 'w', encoding="utf-8") as file_csv:
         writer = csv.writer(file_csv, delimiter=',')  # Create writer object with this file
         writer.writerow(header)  # Write the header on first row
 
 
-# Append a new row in 'filename'.csv file
+# Append a new row in '/data/filename'.csv file
 def append_csv(filename, row):
-    with open(filename + '.csv', 'a', encoding="utf-8") as file_csv:
-        writer = csv.writer(file_csv, delimiter=',')
-        writer.writerow(row)  # Append with the new row
+    with open('./data/' + filename + '.csv', 'a', encoding="utf-8") as file_csv:
+        for book_url in row:
+            writer = csv.writer(file_csv, delimiter=',')
+            writer.writerow(details_extractor(book_url))  # Append with the new row
 
 
 # Extract all product links from a category input
@@ -93,7 +102,7 @@ def product_links_extractor(url):
             for article in articles:
                 link = article.find('a')['href']
                 link = link.strip("./")
-                links.append('https://books.toscrape.com/catalogue/' + link)
+                links.append(SITE_URL + 'catalogue/' + link)
             next_page = soup.find('li', class_='next')
             if not next_page:
                 break
@@ -114,12 +123,23 @@ def all_cats_extractor(url):
         cats = soup.find('ul', class_='nav nav-list').find('ul').findAll('a')
         for cat in cats:
             link = cat['href']
-            cats_urls.append('https://books.toscrape.com/' + link)
+            cats_urls.append(SITE_URL + link)
             cat_name = cat.text.strip()
             cats_names.append(cat_name)
     else:
         return print("url error")
     return cats_urls, cats_names
+
+
+def download_img(url, filename):
+    invalid = '<>:"/\|?*'
+    for char in invalid:
+        filename = filename.replace(char, '')
+    filename = filename.replace(' ', '_')
+    r = requests.get(url, allow_redirects=True)
+    if not os.path.exists(CWD + './data/images'):
+        os.makedirs(CWD + './data/images')
+    open('./data/images/' + filename + '.jpg', 'wb').write(r.content)
 
 
 def main():
@@ -128,15 +148,12 @@ def main():
                    "price_excluding_tax", "number_available", "product_description", "category",
                    "review_rating", "image_url"]
 
-    site_url = 'https://books.toscrape.com/'
-    categories = all_cats_extractor(site_url)
+    categories = all_cats_extractor(SITE_URL)
 
     for category_url, category_name in zip(categories[0], categories[1]):
         books_urls = product_links_extractor(category_url)
         create_csv(category_name, header_list)
-
-        for book_url in books_urls:
-            append_csv(category_name, details_extractor(book_url))
+        append_csv(category_name, books_urls)
 
 
 main()
