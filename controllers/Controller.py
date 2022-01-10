@@ -56,12 +56,12 @@ def append_csv_file(filename, books):
             writer.writerow(details)
 
 
-def download_image_book(url, filename):
+def download_image_book(image_url, filename):
     invalid = '<>:"/\|?*'
     for char in invalid:
         filename = filename.replace(char, '')
     filename = filename.replace(' ', '_')
-    r = requests.get(url, allow_redirects=True)
+    r = requests.get(image_url, allow_redirects=True)
     if not os.path.exists(CWD + './data/images'):
         os.makedirs(CWD + './data/images')
     open('./data/images/' + filename + '.jpg', 'wb').write(r.content)
@@ -143,6 +143,7 @@ class Controller:
                     soup.find("div", class_="item active").find('img')['src']
                 book.image_url = self.online_resource.site_url + \
                                  img_url_raw.strip("./")
+                download_image_book(book.image_url, book.title)
                 self.info_view.show_book_details(book)
 
     def load_data_to_csv(self):
